@@ -4,21 +4,17 @@ import type { TodoFilter, TodoFiltersProps } from '../types';
 
 const Tabs = styled.nav`
   display: flex;
-  gap: 4px;
-  margin-top: 12px;
-  padding: 4px;
-  border-radius: 12px;
-  background: #f0f2f8;
+  gap: 8px;
+  margin-top: 16px;
 `;
 
 const FilterLink = styled(Link)<{ $selected: boolean }>`
   flex: 1;
-  padding: 8px 4px;
-  font-size: 14px;
-  font-weight: 650;
+  padding: 8px;
   border-radius: 8px;
   color: ${({ $selected }) => ($selected ? 'white' : '#344054')};
-  background: ${({ $selected }) => ($selected ? '#4f46e5' : 'transparent')};
+  /* $selected는 현재 URL에 해당하는 필터 색상만 바꿈 */
+  background: ${({ $selected }) => ($selected ? '#4f46e5' : '#eef1f7')};
   text-align: center;
   text-decoration: none;
 `;
