@@ -20,22 +20,27 @@ export default function LoginPage() {
     setValues((previous) => ({ ...previous, [name]: value }));
   }
 
-  async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
+  function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending) return;
     setPending(true);
     setError('');
     try {
-      const { user, accessToken } = await fakeLoginApi(values.userId, values.password);
-      if (remember) localStorage.setItem('saved-user-id', values.userId);
-      else localStorage.removeItem('saved-user-id');
-      login(user, accessToken);
-      navigate('/todos/all', { replace: true });
+      fakeLoginApi(values.userId, values.password).then(({ user, accessToken }) => {
+        remember ? localStorage.setItem('saved-user-id', values.userId) : localStorage.removeItem('saved-user-id');
+        login(user, accessToken);
+        navigate('/todos/all', { replace: true });
+      }).catch((err) => {
+        setError(err instanceof Error ? err.message : '로그인에 실패했습니다.');
+        setValues((previous) => ({ ...previous, password: '' }));
+        passwordInput.current?.focus();
+      }).finally(() => {
+        setPending(false);
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : '로그인에 실패했습니다.');
       setValues((previous) => ({ ...previous, password: '' }));
       passwordInput.current?.focus();
-    } finally {
       setPending(false);
     }
   }

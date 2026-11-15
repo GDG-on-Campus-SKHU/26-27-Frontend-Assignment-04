@@ -50,23 +50,19 @@ export default function TodoPage() {
     return <Navigate to="/todos/all" replace />;
   }
 
-  const visibleTodos = todos.filter((todo) => {
-    if (filter === 'active') return !todo.done;
-    if (filter === 'done') return todo.done;
-    return true;
-  });
+  const visibleTodos = todos.filter((todo) =>
+    filter === 'active' ? !todo.done : filter === 'done' ? todo.done : true
+  );
 
-  let emptyMessage = '';
-  let emptyDescription = '';
-
-  if (todos.length === 0) {
-    emptyMessage = '아직 등록된 할 일이 없어요';
-    emptyDescription = '위 입력창에 할 일을 입력하고 [추가] 버튼을 눌러 보세요.';
-  } else if (filter === 'active') {
-    emptyMessage = '진행 중인 할 일이 없어요';
-  } else if (filter === 'done') {
-    emptyMessage = '완료한 할 일이 없어요';
-  }
+  const emptyMessage = todos.length === 0 
+    ? '아직 등록된 할 일이 없어요'
+    : filter === 'active' 
+      ? '진행 중인 할 일이 없어요'
+      : filter === 'done'
+        ? '완료한 할 일이 없어요'
+        : '';
+  
+  const emptyDescription = todos.length === 0 ? '위 입력창에 할 일을 입력하고 [추가] 버튼을 눌러 보세요.' : '';
 
 
   return (

@@ -25,9 +25,7 @@ export default function SignupPage() {
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     const { name, value } = event.currentTarget;
-    if (name === 'username') {
-      event.currentTarget.setCustomValidity('');
-    }
+    name === 'username' && event.currentTarget.setCustomValidity('');
     setValues((previous) => ({ ...previous, [name]: value }));
   }
 
