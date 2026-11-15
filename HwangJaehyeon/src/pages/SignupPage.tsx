@@ -1,34 +1,12 @@
 import { useRef, useState } from 'react';
 import type { ChangeEvent, SyntheticEvent } from 'react';
 import { useNavigate } from 'react-router';
-import styled from 'styled-components';
-import { Card, PrimaryButton, TextInput } from '../components/ui';
+import { fakeSignupApi } from '../api/auth';
+import { useAuthStore } from '../stores/useAuthStore';
+import { Form, Field, Interests, SubmitButton, ErrorMessage } from '../components/formStyles';
+import { Link } from 'react-router';
+import { Card, TextInput } from '../components/ui';
 import type { SignupValues } from '../types';
-
-const Form = styled.form`
-  display: grid;
-  gap: 16px;
-  max-width: 440px;
-  margin-top: 24px;
-`;
-
-const Field = styled.label`
-  display: grid;
-  gap: 6px;
-`;
-
-const Interests = styled.fieldset`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin: 0;
-  border: 1px solid #cdd5e4;
-  border-radius: 8px;
-`;
-
-const SubmitButton = styled(PrimaryButton)`
-  justify-self: start;
-`;
 
 export default function SignupPage() {
   const [values, setValues] = useState<SignupValues>({
@@ -38,6 +16,10 @@ export default function SignupPage() {
     interest: 'frontend',
     agreed: false,
   });
+  const login = useAuthStore((state) => state.login);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
+  const userInput = useRef<HTMLInputElement>(null);
   const confirmInput = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
@@ -54,18 +36,29 @@ export default function SignupPage() {
     setValues((previous) => ({ ...previous, agreed }));
   }
 
-  function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!values.agreed) return;
+    if (!values.agreed || pending) return;
 
     if (values.password !== values.passwordConfirm) {
       window.alert('비밀번호가 일치하지 않습니다.');
       confirmInput.current?.focus();
       return;
     }
-    // 백틱을 활용한 문구 출력
-    window.alert(`${values.username}님, 가입을 환영합니다!`);
-    navigate('/todos/all');
+
+    setPending(true);
+    setError('');
+    try {
+      const { user, accessToken } = await fakeSignupApi(values.username, values.password, values.interest);
+      window.alert(`${user.userId}님, 가입을 환영합니다!`);
+      login(user, accessToken);
+      navigate('/todos/all', { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '회원가입에 실패했습니다.');
+      userInput.current?.focus();
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -76,6 +69,7 @@ export default function SignupPage() {
           아이디
           <TextInput
             type="text"
+            ref={userInput}
             name="username"
             value={values.username}
             onChange={handleChange}
@@ -139,8 +133,10 @@ export default function SignupPage() {
           약관에 동의합니다.
         </label>
 
-        <SubmitButton type="submit" disabled={!values.agreed}>가입하기</SubmitButton>
+        <SubmitButton type="submit" disabled={!values.agreed || pending}>{pending ? '가입 중...' : '가입하기'}</SubmitButton>
       </Form>
+      {error && <ErrorMessage role="alert">{error}</ErrorMessage>}
+      <p><Link to="/login">로그인</Link></p>
     </Card>
   );
 }
