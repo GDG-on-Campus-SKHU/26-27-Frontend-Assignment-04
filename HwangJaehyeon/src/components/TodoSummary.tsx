@@ -3,17 +3,14 @@ import type { TodoSummaryProps } from '../types';
 import { Button } from './ui';
 
 const Summary = styled.div`
+  /* 개수는 왼쪽, 정렬 버튼은 오른쪽에 놓는다. 세로 가운데를 맞추고 추가 폼과의 위쪽 간격 추가함 */
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  margin-top: 24px;
-  color: #566173;
-  font-size: 14px;
+  gap: 8px;
+  margin-top: 16px;
 `;
 
-// 정렬의 경우, 총 목록 개수가 1개라면 disabled 되게 구현함
 export default function TodoSummary({ totalCount, doneCount, onSort }: TodoSummaryProps) {
   return (
     <Summary>

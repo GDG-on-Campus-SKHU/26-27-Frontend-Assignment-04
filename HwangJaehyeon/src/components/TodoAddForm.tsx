@@ -1,31 +1,34 @@
 import { useRef, useState } from 'react';
 import type { SyntheticEvent } from 'react';
 import styled from 'styled-components';
-import type { TodoAddFormProps } from '../types';
+import { useTodos } from '../contexts/useTodos';
+import { useNavigate } from 'react-router';
 import { PrimaryButton, TextInput } from './ui';
 
 const Form = styled.form`
+  /* 입력창과 추가 버튼을 가로로 배치. */
   display: flex;
   gap: 8px;
 
   button {
     flex-shrink: 0;
-    min-width: 64px;
   }
 `;
 
-export default function TodoAddForm({ onAdd }: TodoAddFormProps) {
+export default function TodoAddForm() {
+  const { addTodo } = useTodos();
+  const navigate = useNavigate();
   const [text, setText] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // form 제출 함수
   function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const newText = text.trim();
     if (newText === '') return;
 
-    onAdd(newText);
+    addTodo(newText);
+    navigate('/todos/all');
     setText('');
     inputRef.current?.focus();
   }

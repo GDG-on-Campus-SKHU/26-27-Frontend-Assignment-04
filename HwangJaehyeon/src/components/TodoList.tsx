@@ -3,30 +3,14 @@ import type { TodoListProps } from '../types';
 import TodoItem from './TodoItem';
 
 const Empty = styled.div`
-  margin-top: 18px;
-  padding: 30px 14px;
-  border: 1px dashed #d6dcee;
-  border-radius: 12px;
-  background: #f8f9fd;
+  /* 빈 목록 안내는 가운데 정렬, 위아래에 여백을 추가함. */
+  padding: 24px 0;
+  color: #566173;
   text-align: center;
-
-  p {
-    margin: 0;
-    font-weight: 650;
-  }
-
-  p + p {
-    margin-top: 5px;
-    color: #566173;
-    font-size: 14px;
-    font-weight: 400;
-  }
 `;
 
 const List = styled.ul`
-  display: grid;
-  gap: 8px;
-  margin: 18px 0 0;
+  /* ul의 기본 들여쓰기와 목록 기호를 없애서 할 일 항목만 보이게 했음. */
   padding: 0;
   list-style: none;
 `;
@@ -35,26 +19,18 @@ export default function TodoList({
   todos,
   emptyMessage,
   emptyDescription,
-  onToggle,
-  onEdit,
-  onDelete,
 }: TodoListProps) {
   return todos.length === 0 ? (
-    // 비어있는 경우
     <Empty>
       <p>{emptyMessage}</p>
       {emptyDescription && <p>{emptyDescription}</p>}
     </Empty>
   ) : (
-    
     <List>
       {todos.map((todo) => (
         <TodoItem
           key={todo.id}
           todo={todo}
-          onToggle={onToggle}
-          onEdit={onEdit}
-          onDelete={onDelete}
         />
       ))}
     </List>

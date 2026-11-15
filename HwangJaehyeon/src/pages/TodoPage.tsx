@@ -1,19 +1,21 @@
 import { useEffect } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router';
+import { Navigate, useParams } from 'react-router';
 import styled from 'styled-components';
 import TodoAddForm from '../components/TodoAddForm';
 import TodoFilters from '../components/TodoFilters';
 import TodoList from '../components/TodoList';
 import TodoSummary from '../components/TodoSummary';
 import { Button, Card } from '../components/ui';
-import type { TodoPageProps } from '../types';
+import { useTodos } from '../contexts/useTodos';
 
 const Description = styled.p`
+  /* 설명은 제목보다 옅은 색으로 표시. */
   margin: 0 0 24px;
   color: #566173;
 `;
 
 const Celebration = styled.p`
+  /* 모두 완료했을 경우, 연한 초록배경. + 가운데 정렬처리함. */
   padding: 12px;
   border-radius: 8px;
   color: #166534;
@@ -22,22 +24,15 @@ const Celebration = styled.p`
 `;
 
 const ClearButton = styled(Button)`
+  /* 일괄 삭제 버튼은 목록 아래 가운데에 배치. 삭제 글자는 빨간색으로 표시되게 처리함. */
   display: block;
   margin: 16px auto 0;
   color: #b42318;
 `;
 
-export default function TodoPage({
-  todos,
-  onAdd,
-  onToggle,
-  onEdit,
-  onDelete,
-  onSort,
-  onClearDone,
-}: TodoPageProps) {
+export default function TodoPage() {
+  const { todos, sortTodos, clearDoneTodos } = useTodos();
   const { filter } = useParams();
-  const navigate = useNavigate();
 
   const doneCount = todos.filter((todo) => todo.done).length;
   const activeCount = todos.length - doneCount;
@@ -64,30 +59,24 @@ export default function TodoPage({
   let emptyMessage = '';
   let emptyDescription = '';
 
-  if (visibleTodos.length === 0) {
-    if (todos.length === 0) {
-      emptyMessage = '아직 등록된 할 일이 없어요';
-      emptyDescription = '위 입력창에 할 일을 입력하고 [추가] 버튼을 눌러 보세요.';
-    } else if (filter === 'active') {
-      emptyMessage = '진행 중인 할 일이 없어요';
-    } else {
-      emptyMessage = '완료한 할 일이 없어요';
-    }
+  if (todos.length === 0) {
+    emptyMessage = '아직 등록된 할 일이 없어요';
+    emptyDescription = '위 입력창에 할 일을 입력하고 [추가] 버튼을 눌러 보세요.';
+  } else if (filter === 'active') {
+    emptyMessage = '진행 중인 할 일이 없어요';
+  } else if (filter === 'done') {
+    emptyMessage = '완료한 할 일이 없어요';
   }
 
-  function handleAdd(text: string) {
-    onAdd(text);
-    if (filter !== 'all') navigate('/todos/all');
-  }
 
   return (
     <Card aria-labelledby="todo-title">
       <h1 id="todo-title">오늘의 할 일</h1>
       <Description>작은 일부터 하나씩 완료해 보세요.</Description>
 
-      <TodoAddForm onAdd={handleAdd} />
+      <TodoAddForm />
 
-      <TodoSummary totalCount={todos.length} doneCount={doneCount} onSort={onSort} />
+      <TodoSummary totalCount={todos.length} doneCount={doneCount} onSort={sortTodos} />
 
       <TodoFilters filter={filter} />
 
@@ -97,13 +86,10 @@ export default function TodoPage({
         todos={visibleTodos}
         emptyMessage={emptyMessage}
         emptyDescription={emptyDescription}
-        onToggle={onToggle}
-        onEdit={onEdit}
-        onDelete={onDelete}
       />
 
       {doneCount > 0 && (
-        <ClearButton type="button" onClick={onClearDone}>
+        <ClearButton type="button" onClick={clearDoneTodos}>
           완료한 할 일 지우기 ({doneCount})
         </ClearButton>
       )}
