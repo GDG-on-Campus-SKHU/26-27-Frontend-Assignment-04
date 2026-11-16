@@ -3,7 +3,7 @@ export interface Todo {
   id: number;
   text: string;
   done: boolean;
-  daysLeft?: number;
+  dueDate?: string;
 }
 
 // 필터 탭 타입

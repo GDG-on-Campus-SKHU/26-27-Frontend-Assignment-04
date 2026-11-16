@@ -1,24 +1,41 @@
 import { useState, useRef, useEffect } from "react";
-import type { FormEvent } from "react";
-import styled from "styled-components";
+import type { FormEvent, KeyboardEvent } from "react";
+import styled, { keyframes, css } from "styled-components";
 import type { Todo } from "../types";
+import { useTodos } from "../contexts/TodoContext";
 
 interface TodoItemProps {
   todo: Todo;
-  onToggle: (id: number) => void;
-  onEdit: (id: number, text: string, daysLeft?: number) => void;
-  onDelete: (id: number) => void;
 }
 
-// 현재 날짜에 N일을 더한 YYYY-MM-DD 문자열 반환
-function formatDaysLeft(days: number): string {
-  const target = new Date();
-  target.setDate(target.getDate() + days);
-  const yyyy = target.getFullYear();
-  const mm = String(target.getMonth() + 1).padStart(2, "0");
-  const dd = String(target.getDate()).padStart(2, "0");
-  return `${days}일 남음 (${yyyy}-${mm}-${dd})`;
+// 마감일(YYYY-MM-DD)과 오늘 날짜를 비교하여 남은 일수를 계산
+function calculateDaysLeft(dueDate: string): number {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const [year, month, day] = dueDate.split("-").map(Number);
+  const target = new Date(year, month - 1, day);
+  const diffMs = target.getTime() - today.getTime();
+  return Math.round(diffMs / (1000 * 60 * 60 * 24));
 }
+
+function formatDueDate(dueDate: string, daysLeft: number): string {
+  if (daysLeft < 0) {
+    return `${Math.abs(daysLeft)}일 지남 (${dueDate})`;
+  }
+  return `${daysLeft}일 남음 (${dueDate})`;
+}
+
+const popAnimation = keyframes`
+  0% {
+    transform: scale(0.8);
+  }
+  50% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+`;
 
 const Item = styled.li<{ $done: boolean }>`
   display: flex;
@@ -36,25 +53,38 @@ const Item = styled.li<{ $done: boolean }>`
 `;
 
 const ToggleButton = styled.button<{ $done: boolean }>`
-  width: 30px;
-  height: 30px;
-  border: 1.5px solid ${({ $done }) => ($done ? "#3b82f6" : "#94a3b8")};
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid ${({ $done }) => ($done ? "#3b82f6" : "#cbd5e1")};
   border-radius: 50%;
   background-color: ${({ $done }) => ($done ? "#3b82f6" : "#ffffff")};
-  color: ${({ $done }) => ($done ? "#ffffff" : "#475569")};
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1;
+  color: ${({ $done }) => ($done ? "#ffffff" : "transparent")};
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+
+  ${({ $done }) =>
+    $done &&
+    css`
+      animation: ${popAnimation} 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+    `}
 
   &:hover {
     border-color: #3b82f6;
-    color: ${({ $done }) => ($done ? "#ffffff" : "#3b82f6")};
+    color: ${({ $done }) => ($done ? "#ffffff" : "#93c5fd")};
+    transform: scale(1.06);
+  }
+
+  &:active {
+    transform: scale(0.92);
   }
 `;
 
@@ -66,14 +96,37 @@ const TodoText = styled.span<{ $done: boolean }>`
   word-break: break-word;
 `;
 
-const DateBadge = styled.span<{ $done: boolean }>`
-  padding: 4px 8px;
+const DateBadge = styled.span<{ $done: boolean; $daysLeft: number }>`
+  padding: 4px 9px;
   border-radius: 6px;
-  background-color: ${({ $done }) => ($done ? "#f1f5f9" : "#eff6ff")};
-  color: ${({ $done }) => ($done ? "#94a3b8" : "#2563eb")};
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
+
+  ${({ $done, $daysLeft }) => {
+    if ($done) {
+      return css`
+        background-color: #f1f5f9;
+        color: #94a3b8;
+      `;
+    }
+    if ($daysLeft <= 3) {
+      return css`
+        background-color: #fee2e2;
+        color: #b91c1c;
+      `;
+    }
+    if ($daysLeft <= 7) {
+      return css`
+        background-color: #fef3c7;
+        color: #d97706;
+      `;
+    }
+    return css`
+      background-color: #eff6ff;
+      color: #2563eb;
+    `;
+  }}
 `;
 
 const EditForm = styled.form`
@@ -93,28 +146,19 @@ const EditInput = styled.input`
   outline: none;
 `;
 
-const EditDaysWrapper = styled.label`
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 0 8px;
+const EditDateInput = styled.input`
+  padding: 6px 8px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   background-color: #ffffff;
-  color: #475569;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-`;
-
-const EditDaysInput = styled.input`
-  width: 42px;
-  padding: 6px 0;
-  border: none;
-  font-size: 13px;
   color: #0f172a;
-  text-align: right;
+  font-size: 13px;
+  font-family: inherit;
   outline: none;
+
+  &:focus {
+    border-color: #3b82f6;
+  }
 `;
 
 const Actions = styled.div`
@@ -157,36 +201,52 @@ const ActionButton = styled.button<{ $variant?: "primary" | "danger" }>`
   }
 `;
 
-export default function TodoItem({
-  todo,
-  onToggle,
-  onEdit,
-  onDelete,
-}: TodoItemProps) {
+export default function TodoItem({ todo }: TodoItemProps) {
+  const { toggleTodo, editTodo, deleteTodo } = useTodos();
+
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(todo.text);
-  const [editDays, setEditDays] = useState(
-    todo.daysLeft !== undefined ? String(todo.daysLeft) : "",
-  );
+  const [editDueDate, setEditDueDate] = useState(todo.dueDate ?? "");
   const editInputRef = useRef<HTMLInputElement>(null);
 
-  // 수정 모드 진입 시 입력창에 자동 포커스
+  const daysLeft =
+    todo.dueDate !== undefined ? calculateDaysLeft(todo.dueDate) : undefined;
+
+  // 수정 모드 진입 시 입력창에 자동 포커스 및 Esc 키 취소 처리
   useEffect(() => {
-    if (isEditing) {
-      editInputRef.current?.focus();
-    }
-  }, [isEditing]);
+    if (!isEditing) return;
+
+    editInputRef.current?.focus();
+
+    const handleWindowKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setEditText(todo.text);
+        setEditDueDate(todo.dueDate ?? "");
+        setIsEditing(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleWindowKeyDown);
+    return () => window.removeEventListener("keydown", handleWindowKeyDown);
+  }, [isEditing, todo.text, todo.dueDate]);
 
   const handleStartEdit = () => {
     setEditText(todo.text);
-    setEditDays(todo.daysLeft !== undefined ? String(todo.daysLeft) : "");
+    setEditDueDate(todo.dueDate ?? "");
     setIsEditing(true);
   };
 
   const handleCancelEdit = () => {
     setEditText(todo.text);
-    setEditDays(todo.daysLeft !== undefined ? String(todo.daysLeft) : "");
+    setEditDueDate(todo.dueDate ?? "");
     setIsEditing(false);
+  };
+
+  const handleEditKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      handleCancelEdit();
+    }
   };
 
   const handleEditSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -194,12 +254,7 @@ export default function TodoItem({
     const trimmed = editText.trim();
     if (!trimmed) return;
 
-    const parsedDays =
-      editDays.trim() !== "" && !Number.isNaN(Number(editDays))
-        ? Math.max(0, Math.floor(Number(editDays)))
-        : undefined;
-
-    onEdit(todo.id, trimmed, parsedDays);
+    editTodo(todo.id, trimmed, editDueDate || undefined);
     setIsEditing(false);
   };
 
@@ -209,32 +264,39 @@ export default function TodoItem({
       <ToggleButton
         type="button"
         $done={todo.done}
-        onClick={() => onToggle(todo.id)}
+        onClick={() => toggleTodo(todo.id)}
         aria-label={todo.done ? "완료 취소" : "완료"}
       >
-        {todo.done ? "*" : "○"}
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
       </ToggleButton>
 
       {isEditing ? (
         /* 인라인 수정 폼 */
-        <EditForm onSubmit={handleEditSubmit}>
+        <EditForm onSubmit={handleEditSubmit} onKeyDown={handleEditKeyDown}>
           <EditInput
             ref={editInputRef}
             type="text"
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
           />
-          <EditDaysWrapper>
-            <EditDaysInput
-              type="number"
-              min={0}
-              value={editDays}
-              onChange={(e) => setEditDays(e.target.value)}
-              placeholder="N"
-              aria-label="남은 일수 수정"
-            />
-            <span>일 남음</span>
-          </EditDaysWrapper>
+          <EditDateInput
+            type="date"
+            value={editDueDate}
+            onChange={(e) => setEditDueDate(e.target.value)}
+            aria-label="마감일 수정"
+          />
           <ActionButton type="submit" $variant="primary">
             저장
           </ActionButton>
@@ -249,9 +311,9 @@ export default function TodoItem({
 
           {/* N일 남음 표시(수정 버튼 왼쪽) / 수정 / 삭제 버튼 */}
           <Actions>
-            {todo.daysLeft !== undefined && (
-              <DateBadge $done={todo.done}>
-                {formatDaysLeft(todo.daysLeft)}
+            {todo.dueDate !== undefined && daysLeft !== undefined && (
+              <DateBadge $done={todo.done} $daysLeft={daysLeft}>
+                {formatDueDate(todo.dueDate, daysLeft)}
               </DateBadge>
             )}
             <ActionButton type="button" onClick={handleStartEdit}>
@@ -260,7 +322,7 @@ export default function TodoItem({
             <ActionButton
               type="button"
               $variant="danger"
-              onClick={() => onDelete(todo.id)}
+              onClick={() => deleteTodo(todo.id)}
             >
               삭제
             </ActionButton>

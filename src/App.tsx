@@ -1,37 +1,47 @@
-import { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router";
-import type { Todo } from "./types";
+import { Routes, Route, Navigate, Outlet } from "react-router";
 import Layout from "./components/Layout";
+import { ProtectedRoute, GuestRoute } from "./components/AuthRoutes";
+import { TodoProvider } from "./contexts/TodoContext";
 import Home from "./pages/Home";
-import TodoPage from "./pages/Todo";
+import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import TodoPage from "./pages/Todo";
+import MyPage from "./pages/MyPage";
 import NotFound from "./pages/NotFound";
 
 export default function App() {
-  // 페이지(라우트) 이동 시에도 할 일 목록이 초기화되지 않도록 상위(App)에서 상태 관리
-  const [todos, setTodos] = useState<Todo[]>([]);
-
-  // 남은 할 일 수에 따른 브라우저 탭 제목 변경
-  const activeCount = todos.filter((todo) => !todo.done).length;
-  useEffect(() => {
-    document.title =
-      activeCount > 0 ? `할 일 ${activeCount}개 남음` : "오늘의 할 일";
-  }, [activeCount]);
-
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/todos" element={<Navigate to="/todos/all" replace />} />
-          <Route
-            path="/todos/:filter"
-            element={<TodoPage todos={todos} setTodos={setTodos} />}
-          />
+    <Routes>
+      <Route element={<Layout />}>
+        {/* 누구나 접근 가능 */}
+        <Route path="/" element={<Home />} />
+
+        {/* 로그인하지 않은 사용자만 접근 가능 */}
+        <Route element={<GuestRoute />}>
+          <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="*" element={<NotFound />} />
         </Route>
-      </Routes>
-    </BrowserRouter>
+
+        {/* 로그인한 사용자만 접근 가능 */}
+        <Route element={<ProtectedRoute />}>
+          {/* TodoProvider는 /todos 아래 경로만 감싼다 */}
+          <Route
+            path="/todos"
+            element={
+              <TodoProvider>
+                <Outlet />
+              </TodoProvider>
+            }
+          >
+            <Route index element={<Navigate to="/todos/all" replace />} />
+            <Route path=":filter" element={<TodoPage />} />
+          </Route>
+          <Route path="/mypage" element={<MyPage />} />
+        </Route>
+
+        {/* 404 */}
+        <Route path="*" element={<NotFound />} />
+      </Route>
+    </Routes>
   );
 }

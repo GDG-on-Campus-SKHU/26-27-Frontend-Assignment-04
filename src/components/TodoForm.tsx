@@ -1,10 +1,8 @@
 import { useState, useRef } from "react";
 import type { FormEvent } from "react";
+import { useNavigate, useParams } from "react-router";
 import styled from "styled-components";
-
-interface TodoFormProps {
-  onAdd: (text: string, daysLeft?: number) => void;
-}
+import { useTodos } from "../contexts/TodoContext";
 
 const Form = styled.form`
   display: flex;
@@ -28,33 +26,20 @@ const Input = styled.input`
   }
 `;
 
-const DaysInputWrapper = styled.label`
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0 12px;
+const DateInput = styled.input`
+  padding: 10px 12px;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
   background-color: #ffffff;
-  color: #475569;
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
+  color: #0f172a;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
 
-  &:focus-within {
+  &:focus {
     border-color: #3b82f6;
   }
-`;
-
-const DaysInput = styled.input`
-  width: 48px;
-  padding: 10px 0;
-  border: none;
-  font-size: 14px;
-  color: #0f172a;
-  text-align: right;
-  outline: none;
-  background: transparent;
 `;
 
 const SubmitButton = styled.button<{ $active: boolean }>`
@@ -73,9 +58,13 @@ const SubmitButton = styled.button<{ $active: boolean }>`
   }
 `;
 
-export default function TodoForm({ onAdd }: TodoFormProps) {
+export default function TodoForm() {
+  const { addTodo } = useTodos();
+  const { filter } = useParams<{ filter: string }>();
+  const navigate = useNavigate();
+
   const [text, setText] = useState("");
-  const [days, setDays] = useState("");
+  const [dueDate, setDueDate] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isValid = text.trim().length > 0;
@@ -85,15 +74,14 @@ export default function TodoForm({ onAdd }: TodoFormProps) {
     const trimmed = text.trim();
     if (!trimmed) return;
 
-    const parsedDays =
-      days.trim() !== "" && !Number.isNaN(Number(days))
-        ? Math.max(0, Math.floor(Number(days)))
-        : undefined;
-
-    onAdd(trimmed, parsedDays);
+    addTodo(trimmed, dueDate || undefined);
     setText("");
-    setDays("");
+    setDueDate("");
     inputRef.current?.focus();
+
+    if (filter !== "all") {
+      navigate("/todos/all");
+    }
   };
 
   return (
@@ -105,17 +93,12 @@ export default function TodoForm({ onAdd }: TodoFormProps) {
         onChange={(e) => setText(e.target.value)}
         placeholder="새로운 할 일을 입력하세요"
       />
-      <DaysInputWrapper>
-        <DaysInput
-          type="number"
-          min={0}
-          value={days}
-          onChange={(e) => setDays(e.target.value)}
-          placeholder="N"
-          aria-label="남은 일수"
-        />
-        <span>일 남음</span>
-      </DaysInputWrapper>
+      <DateInput
+        type="date"
+        value={dueDate}
+        onChange={(e) => setDueDate(e.target.value)}
+        aria-label="마감일"
+      />
       <SubmitButton type="submit" disabled={!isValid} $active={isValid}>
         추가
       </SubmitButton>
